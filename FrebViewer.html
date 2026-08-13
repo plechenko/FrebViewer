@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FREB Viewer</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --surface-color: #ffffff;
+            --text-color: #333333;
+            --text-muted: #666666;
+            --border-color: #eeeeee;
+            --toolbar-bg: #2c3e50;
+            --toolbar-text: #ffffff;
+            --accent-color: #3498db;
+            --accent-hover: #2980b9;
+            --table-header-bg: #f8f9fa;
+            --table-row-hover: #fcfcfc;
+            --drop-zone-border: #95a5a6;
+            --drop-zone-text: #bdc3c7;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --text-color: #e0e0e0;
+            --text-muted: #aaaaaa;
+            --border-color: #333333;
+            --toolbar-bg: #1a1a1a;
+            --toolbar-text: #ffffff;
+            --accent-color: #3498db;
+            --accent-hover: #5dade2;
+            --table-header-bg: #252525;
+            --table-row-hover: #2a2a2a;
+            --drop-zone-border: #444;
+            --drop-zone-text: #666;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            color: var(--text-color);
+            background: var(--bg-color);
+        }
+
+        #toolbar {
+            background: var(--toolbar-bg);
+            color: var(--toolbar-text);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            text-wrap: nowrap;
+        }
+
+        #drop-zone {
+            border: 2px dashed var(--drop-zone-border);
+            border-radius: 4px;
+            padding: 4px 12px;
+            font-size: 0.85rem;
+            color: var(--drop-zone-text);
+            cursor: pointer;
+            width: 100%;
+        }
+
+        #drop-zone.dragover {
+            background: var(--toolbar-bg);
+            border-color: var(--accent-color);
+            color: white;
+        }
+
+        #toolbar select {
+            padding: 6px;
+            border-radius: 4px;
+            border: none;
+            /* min-width: 150px; */
+        }
+        #themeSelector {
+            /* min-width: 10px; */
+            background: var(--toolbar-bg);
+            color: var(--drop-zone-text);
+        }
+
+        #toolbar button {
+            padding: 6px 16px;
+            cursor: pointer;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        #toolbar button:hover {
+            background: var(--accent-hover);
+        }
+
+        #viewer-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--surface-color);
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        .summary-card {
+            flex: 0 0 auto;
+        }
+
+        .summary-card h2 {
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+        }
+
+        .trace-card {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            /* Ensures flex child can shrink and scroll */
+        }
+
+        h2 {
+            margin-top: 0;
+            font-size: 1.2rem;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            flex: 0 0 auto;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .summary-item label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .summary-item span {
+            font-size: 1rem;
+        }
+
+        .trace-grid {
+            display: grid;
+            grid-template-columns: 65px 120px 80px 320px minmax(0, 1fr);
+            /* grid-template-columns: 65px 110px 1fr; */
+            width: 100%;
+            margin-top: 10px;
+            font-size: 0.9rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            overflow-y: auto;
+            align-content: start;
+            flex: 1;
+        }
+
+        .trace-header,
+        .trace-row {
+            display: contents;
+        }
+
+        .trace-header>div {
+            background: var(--table-header-bg);
+            font-weight: bold;
+            padding: 12px 10px;
+            border-bottom: 2px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .trace-row>div {
+            padding: 10px;
+            border-bottom: 1px solid var(--border-color);
+            min-width: 0;
+            /* Important: allows children to shrink/truncate */
+            overflow-wrap: break-word;
+        }
+
+        .trace-row:hover>div {
+            background-color: var(--table-row-hover);
+        }
+
+        .severity {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+            display: inline-block;
+        }
+
+        .sev-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .sev-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .sev-critical {
+            background: #dc3545;
+            color: white;
+        }
+
+        .sev-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .sev-verbose {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        [data-theme="dark"] .sev-warning {
+            background: #4d3800;
+            color: #ffe69c;
+        }
+
+        [data-theme="dark"] .sev-error {
+            background: #4b1113;
+            color: #f8d7da;
+        }
+
+        [data-theme="dark"] .sev-critical {
+            background: #bd2130;
+            color: white;
+        }
+
+        [data-theme="dark"] .sev-info {
+            background: #083d46;
+            color: #d1ecf1;
+        }
+
+        [data-theme="dark"] .sev-verbose {
+            background: #343a40;
+            color: #adb5bd;
+        }
+
+        .event-details {
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: var(--text-color);
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin-top: 10px;
+        }
+
+        .description {
+            font-style: italic;
+            color: var(--accent-color);
+            display: block;
+            margin-top: 4px;
+        }
+
+        .details-row {
+            grid-column: 1 / -1;
+            display: none;
+            padding: 12px 15px 20px 65px;
+            background: var(--table-header-bg);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .toggle-btn {
+            cursor: pointer;
+            user-select: none;
+            width: 18px;
+            height: 18px;
+            line-height: 16px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            margin-right: 8px;
+            font-weight: bold;
+            background: var(--surface-color);
+            display: inline-block;
+        }
+
+        .event-summary {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: auto;
+        }
+
+        .filter-container {
+            position: relative;
+            display: inline-block;
+            margin-top: -5px;
+        }
+
+        .filter-content {
+            display: none;
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            z-index: 100;
+            width: 280px;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .filter-content.active {
+            display: flex;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .filter-group label {
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .filter-group input[type="text"] {
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        .filter-group-title {
+            font-size: 0.7rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        .small-btn {
+            padding: 2px 8px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            background: var(--surface-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+
+        .small-btn:hover {
+            background: var(--table-header-bg);
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 800px) {
+            #toolbar {
+                flex-wrap: wrap;
+                padding: 10px;
+                gap: 8px;
+            }
+
+            #viewer-content {
+                padding: 10px;
+                gap: 10px;
+            }
+
+            .trace-grid {
+                grid-template-columns: 55px 110px 65px minmax(0, 1fr);
+            }
+
+            /* Hide the 5th column (Summary) on small screens */
+            .trace-header>div:nth-child(5),
+            .trace-row>div:nth-child(5) {
+                display: none;
+            }
+
+            .details-row {
+                padding: 10px 10px 15px 55px;
+            }
+
+            h2 {
+                font-size: 1rem;
+            }
+
+            .trace-card h2 {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 10px;
+            }
+
+            .toggle-btn {
+                width: 22px;
+                height: 22px;
+                line-height: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="toolbar">
+        <strong>FrebLens Viewer</strong>
+        <div id="drop-zone">Click to select or drop FREB XML file here</div>
+        <select id="timeZoneSelector" title="Switch Time Zone">
+            <option value="server">Server Time</option>
+            <option value="local">Local Time</option>
+        </select>
+        <select id="themeSelector" title="Switch Theme">
+            <option value="light" title="Light Theme">☀️</option>
+            <option value="dark" title="Dark Theme">🌙</option>
+            <option value="system" title="System Theme">🌓</option>
+        </select>
+    </div>
+    <div id="viewer-content"></div>
+
+    <script>
+        const NS = {
+            ev: "http://schemas.microsoft.com/win/2004/08/events/event",
+            freb: "http://schemas.microsoft.com/win/2006/06/iis/freb"
+        };
+
+        function openBufferWindow(id, name) {
+            const content = (window._frebBuffers || {})[id];
+            if (!content) return;
+            const win = window.open("", "_blank");
+            if (win) {
+                win.document.write(`<html><head><title>FREB Buffer: ${name}</title>
+                    <style>body{font-family:monospace;white-space:pre-wrap;word-break:break-all;padding:20px;background:#f0f2f5;color:#333;}</style>
+                    </head><body><h3>${name}</h3><hr/></body></html>`);
+                const pre = win.document.createElement("pre");
+                pre.textContent = content;
+                win.document.body.appendChild(pre);
+                win.document.close();
+            }
+        }
+
+        async function renderFrebXml(title, xmlText) {
+            window.document.title = `FREB Viewer - ${title}`;
+            const container = document.getElementById('viewer-content');
+            container.innerHTML = `<h1>Loading trace: ${title}</h1>`;
+            window._frebBuffers = {};
+
+            try {
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlText, "application/xml");
+
+                const failedReq = xmlDoc.querySelector('failedRequest');
+                if (!failedReq) throw new Error("Invalid FREB XML format");
+
+                let html = `
+                    <div class="card summary-card">
+                        <h2 onclick="toggleSummary()">
+                            <span class="toggle-btn" id="summary-toggle-btn">-</span>
+                            Request Summary
+                        </h2>
+                        <div class="summary-grid" id="summary-grid-content">
+                            ${renderSummaryItem('URL', failedReq.getAttribute('url'))}
+                            ${renderSummaryItem('Verb', failedReq.getAttribute('verb'))}
+                            ${renderSummaryItem('Failure Reason', failedReq.getAttribute('failureReason'))}
+                            ${renderSummaryItem('Status Code', failedReq.getAttribute('statusCode'))}
+                            ${renderSummaryItem('Time Taken', failedReq.getAttribute('timeTaken') + ' ms')}
+                            ${renderSummaryItem('App Pool', failedReq.getAttribute('appPoolId'))}
+                            ${renderSummaryItem('Authentication', failedReq.getAttribute('authenticationType'))}
+                        </div>
+                    </div>
+                    <div class="card trace-card">
+                        <h2 style="display: flex; justify-content: space-between; align-items: center;">
+                            Event Trace
+                            <span style="display: flex; gap: 8px;">
+                                <div class="filter-container">
+                                    <button class="small-btn" onclick="toggleFilters(event)">Filters</button>
+                                    <div id="filterPopup" class="filter-content">
+                                        <div class="filter-group">
+                                            <div class="filter-group-title">Search</div>
+                                            <input type="text" id="traceSearch" placeholder="Opcode or Module..." oninput="applyFilters()">
+                                        </div>
+                                        <div class="filter-group" style="border-top: 1px solid var(--border-color); padding-top: 10px;">
+                                            <div class="filter-group-title">Status</div>
+                                            <label><input type="checkbox" id="filterErrors" onchange="applyFilters()"> Errors & Warnings</label>
+                                            <label><input type="checkbox" id="filterVerbose" onchange="applyFilters()"> No Verbose</label>
+                                            <label><input type="checkbox" id="filterSlow" onchange="applyFilters()"> Slow (>10ms)</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button class="small-btn" onclick="expandAllEvents(true)">Expand All</button>
+                                <button class="small-btn" onclick="expandAllEvents(false)">Collapse All</button>
+                            </span>
+                        </h2>
+                        <div class="trace-grid">
+                            <div class="trace-header">
+                                <div>No.</div>
+                                <div>Time</div>
+                                <div>Dur</div>
+                                <div>Event / Module</div>
+                                <div>Summary</div>
+                            </div>
+                `;
+
+                const timeMode = document.getElementById('timeZoneSelector').value;
+                const events = Array.from(xmlDoc.getElementsByTagNameNS(NS.ev, 'Event'));
+                const timestamps = events.map(event => {
+                    const system = event.getElementsByTagNameNS(NS.ev, 'System')[0];
+                    const timeCreated = system.getElementsByTagNameNS(NS.ev, 'TimeCreated')[0];
+                    return new Date(timeCreated.getAttribute('SystemTime')).getTime();
+                });
+
+                events.forEach((event, index) => {
+                    const system = event.getElementsByTagNameNS(NS.ev, 'System')[0];
+                    const renderingInfo = event.getElementsByTagNameNS(NS.ev, 'RenderingInfo')[0];
+                    const eventData = event.getElementsByTagNameNS(NS.ev, 'EventData')[0];
+
+                    const systemTimeAttr = system.getElementsByTagNameNS(NS.ev, 'TimeCreated')[0].getAttribute('SystemTime');
+                    const timeDisplay = formatTime(systemTimeAttr, timeMode);
+
+                    const duration = (index < events.length - 1)
+                        ? timestamps[index + 1] - timestamps[index]
+                        : 0;
+
+                    const level = parseInt(system.getElementsByTagNameNS(NS.ev, 'Level')[0].textContent);
+                    const opcode = renderingInfo ? renderingInfo.getElementsByTagNameNS(NS.ev, 'Opcode')[0].textContent : 'Unknown';
+
+                    // Find module name if present
+                    let moduleNameHtml = "";
+                    let moduleNameText = "";
+                    if (eventData) {
+                        const modData = Array.from(eventData.getElementsByTagNameNS(NS.ev, 'Data')).find(d => d.getAttribute('Name') === 'ModuleName');
+                        if (modData) {
+                            moduleNameText = modData.textContent;
+                            moduleNameHtml = `<br/><small style="color: #666">${moduleNameText}</small>`;
+                        }
+                    }
+
+                    const sevClass = getSeverityClass(level);
+                    const opcodeHtml = sevClass
+                        ? `<strong class="severity ${sevClass}">${opcode}</strong>`
+                        : `<strong>${opcode}</strong>`;
+
+                    html += `
+                        <div class="trace-row" data-index="${index}" data-level="${level}" data-duration="${duration}" data-opcode="${opcode.toLowerCase()}" data-module="${moduleNameText.toLowerCase()}">
+                            <div style="display: flex; align-items: center;">
+                                <span class="toggle-btn" id="toggle-btn-${index}" onclick="toggleDetails(${index})">+</span>
+                                ${index + 1}
+                            </div>
+                            <div class="time-cell" data-utc="${systemTimeAttr}">${timeDisplay}</div>
+                            <div>${duration} ms</div>
+                            <div>
+                                ${opcodeHtml}
+                                ${moduleNameHtml}
+                            </div>
+                            <div class="event-summary">${renderSummary(eventData, renderingInfo)}</div>
+                        </div>
+                        <div id="details-${index}" class="details-row" data-index="${index}">
+                            <small style="text-transform: uppercase; font-weight: bold; color: var(--text-muted)">Extended Details</small>
+                            <div class="event-details">${renderEventData(eventData, renderingInfo)}</div>
+                        </div>
+                    `;
+                });
+
+                html += `</div></div>`;
+                container.innerHTML = html;
+
+            } catch (err) {
+                container.innerHTML = `<div class="card" style="color: red">Error: ${err.message}</div>`;
+            }
+        }
+
+        function renderSummaryItem(label, value) {
+            return `<div class="summary-item"><label>${label}</label><span>${value || 'N/A'}</span></div>`;
+        }
+
+        function formatTime(isoString, mode) {
+            if (!isoString) return "N/A";
+            if (mode === 'local') {
+                const date = new Date(isoString);
+                const y = date.getFullYear();
+                const mo = String(date.getMonth() + 1).padStart(2, '0');
+                const d = String(date.getDate()).padStart(2, '0');
+                const hh = String(date.getHours()).padStart(2, '0');
+                const mm = String(date.getMinutes()).padStart(2, '0');
+                const ss = String(date.getSeconds()).padStart(2, '0');
+                const mmm = String(date.getMilliseconds()).padStart(3, '0');
+                return `${y}-${mo}-${d}<br/>${hh}:${mm}:${ss}.${mmm}`;
+            }
+            return isoString.replace('T', '<br/>').replace('Z', '');
+        }
+
+        function getSeverityClass(level) {
+            if (level === 1) return 'sev-critical';
+            if (level === 2) return 'sev-error';
+            if (level === 3) return 'sev-warning';
+            if (level === 4) return 'sev-info';
+            if (level === 5) return 'sev-verbose';
+            return '';
+        }
+
+        function toggleSummary() {
+            const content = document.getElementById('summary-grid-content');
+            const btn = document.getElementById('summary-toggle-btn');
+            const isVisible = content.style.display !== 'none';
+            content.style.display = isVisible ? 'none' : 'grid';
+            btn.textContent = isVisible ? '+' : '-';
+        }
+
+        function toggleDetails(index) {
+            const details = document.getElementById(`details-${index}`);
+            const btn = document.getElementById(`toggle-btn-${index}`);
+            const isVisible = details.style.display === 'block';
+            details.style.display = isVisible ? 'none' : 'block';
+            btn.textContent = isVisible ? '+' : '-';
+        }
+
+        function toggleFilters(event) {
+            event.stopPropagation();
+            document.getElementById('filterPopup').classList.toggle('active');
+        }
+
+        window.addEventListener('click', (e) => {
+            const popup = document.getElementById('filterPopup');
+            if (popup && !popup.contains(e.target)) {
+                popup.classList.remove('active');
+            }
+        });
+
+        document.getElementById('timeZoneSelector').addEventListener('change', (e) => {
+            const mode = e.target.value;
+            document.querySelectorAll('.time-cell').forEach(cell => {
+                cell.innerHTML = formatTime(cell.getAttribute('data-utc'), mode);
+            });
+        });
+
+        function expandAllEvents(expand) {
+            const rows = document.querySelectorAll('.trace-row');
+            rows.forEach(row => {
+                if (row.style.display === 'none') return; // Skip filtered out rows
+                const index = row.getAttribute('data-index');
+                const details = document.getElementById(`details-${index}`);
+                const btn = document.getElementById(`toggle-btn-${index}`);
+                details.style.display = expand ? 'block' : 'none';
+                if (btn) btn.textContent = expand ? '-' : '+';
+            });
+        }
+
+        function applyFilters() {
+            const searchText = document.getElementById('traceSearch').value.toLowerCase();
+            const showErrors = document.getElementById('filterErrors').checked;
+            const hideVerbose = document.getElementById('filterVerbose').checked;
+            const showSlow = document.getElementById('filterSlow').checked;
+
+            const rows = document.querySelectorAll('.trace-row');
+            rows.forEach(row => {
+                const index = row.getAttribute('data-index');
+                const details = document.getElementById(`details-${index}`);
+                const level = parseInt(row.getAttribute('data-level'));
+                const duration = parseInt(row.getAttribute('data-duration'));
+                const opcode = row.getAttribute('data-opcode');
+                const module = row.getAttribute('data-module');
+
+                let visible = true;
+                if (searchText && !opcode.includes(searchText) && !module.includes(searchText)) visible = false;
+
+                if (showErrors && (level === 0 || level > 3)) visible = false;
+                if (hideVerbose && level === 5) visible = false;
+
+                if (showSlow && duration <= 10) visible = false;
+
+                row.style.display = visible ? 'contents' : 'none';
+                if (!visible) {
+                    details.style.display = 'none';
+                } else {
+                    const btn = document.getElementById(`toggle-btn-${index}`);
+                    details.style.display = (btn.textContent === '-') ? 'block' : 'none';
+                }
+            });
+        }
+
+        function renderSummary(eventData, renderingInfo) {
+            if (!eventData) return "";
+            const dataNodes = Array.from(eventData.getElementsByTagNameNS(NS.ev, 'Data'));
+
+            // Try to find status code, error, or notification name first
+            const status = dataNodes.find(d => ['HttpStatus', 'NotificationStatus', 'ErrorCode', 'Result', 'Notification'].includes(d.getAttribute('Name')));
+            if (status) {
+                const name = status.getAttribute('Name');
+                const val = status.textContent;
+                const desc = renderingInfo ? Array.from(renderingInfo.getElementsByTagNameNS(NS.freb, 'Description')).find(d => d.getAttribute('Data') === name) : null;
+                return `${name}: ${val} ${desc ? `(${desc.textContent})` : ''}`;
+            }
+
+            // Fallback to first non-id field
+            const first = dataNodes.find(d => !['ContextId', 'ConnId', 'RawConnId', 'Buffer', 'BufferData', 'Entity'].includes(d.getAttribute('Name')));
+            return first ? `${first.getAttribute('Name')}: ${first.textContent}` : "";
+        }
+
+        function renderEventData(eventData, renderingInfo) {
+            if (!eventData) return "";
+            const dataNodes = eventData.getElementsByTagNameNS(NS.ev, 'Data');
+            const descriptions = renderingInfo ? renderingInfo.getElementsByTagNameNS(NS.freb, 'Description') : [];
+
+            return Array.from(dataNodes).map(node => {
+                const name = node.getAttribute('Name');
+                const value = node.textContent;
+
+                // Ignore common IDs to reduce noise, similar to XSL logic
+                if (['ContextId', 'ConnId', 'RawConnId'].includes(name)) return "";
+
+                // Handle potentially large or structure-breaking buffer/output fields
+                if (['Buffer', 'BufferData', 'Entity'].includes(name)) {
+                    const bufferId = 'buf_' + Math.random().toString(36).substr(2, 9);
+                    window._frebBuffers[bufferId] = value;
+                    return `<div><strong>${name}:</strong> <span style="color: var(--text-muted)">[Large Data: ${value.length} chars]</span> <button class="small-btn" onclick="openBufferWindow('${bufferId}', '${name}')">Open in New Window</button></div>`;
+                }
+
+                // Check for a "friendly" description in the freb namespace
+                const descNode = Array.from(descriptions).find(d => d.getAttribute('Data') === name);
+                const description = descNode ? `<span class="description">${descNode.textContent}</span>` : "";
+
+                return `<div><strong>${name}:</strong> ${value}${description}</div>`;
+            }).join('');
+        }
+
+        // Drag and Drop Logic
+        const dropZone = document.getElementById('drop-zone');
+        ['dragenter', 'dragover', 'dragleave', 'drop', 'click'].forEach(name => {
+            dropZone.addEventListener(name, e => { e.preventDefault(); e.stopPropagation(); });
+        });
+        dropZone.addEventListener('dragover', () => dropZone.classList.add('dragover'));
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.xml';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = ev => renderFrebXml(file.name, ev.target.result);
+                    reader.readAsText(file);
+                }
+            };
+            input.click();
+        });        
+        dropZone.addEventListener('drop', e => {
+            dropZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = ev => renderFrebXml(file.name, ev.target.result);
+                reader.readAsText(file);
+            }
+        });
+
+
+        // Theme Logic
+        const themeSelector = document.getElementById('themeSelector');
+        function applyTheme(theme) {
+            let actualTheme = theme;
+            if (theme === 'system') {
+                actualTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            document.documentElement.setAttribute('data-theme', actualTheme);
+            localStorage.setItem('freb-viewer-theme', theme);
+            themeSelector.value = theme;
+        }
+
+        themeSelector.addEventListener('change', (e) => applyTheme(e.target.value));
+
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+            if (localStorage.getItem('freb-viewer-theme') === 'system') {
+                applyTheme('system');
+            }
+        });
+
+        // Initialize theme on load
+        applyTheme(localStorage.getItem('freb-viewer-theme') || 'system');
+
+        // window.onload = renderFrebXml;
+    </script>
+</body>
+
+</html>
