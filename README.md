@@ -19,6 +19,10 @@ FREB Viewer is a Microsoft IIS Failed Request Tracing (FREB) file viewer for mod
 
 Open [FrebViewer.html](https://plechenko.github.io/FrebViewer/FrebViewer.html) in your browser and select or drop a FREB XML file for analysis.
 
+Want to try on some real life examples? You can grab a bunch of sample FREB files from the [samples/](samples/) directory.
+
+FREB Viewer supports drag-and-drop of FREB files from your file system, as well as selecting files via the file input dialog or entering a URL. You can provide a URL to sample FREB files using raw GitHub links.
+
 ## Contributing
 
 Any contributions are welcome! Please fork the repository and submit pull requests for any improvements or bug fixes.
