@@ -69,6 +69,12 @@
             width: 100%;
         }
 
+        #drop-zone a {
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: bold;
+        }
+
         #drop-zone.dragover {
             background: var(--toolbar-bg);
             border-color: var(--accent-color);
@@ -126,6 +132,12 @@
             user-select: none;
             display: flex;
             align-items: center;
+        }
+        .summary-card h2 .summary-title {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-top: auto;
+            margin-left: 10px;
         }
 
         .trace-card {
@@ -426,7 +438,7 @@
 <body>
     <div id="toolbar">
         <strong>FrebLens Viewer</strong>
-        <div id="drop-zone">Click to select or drop FREB XML file here</div>
+        <div id="drop-zone"><a onclick="enterUrl()">Enter URL</a> or <a onclick="selectFile()">Click to select</a> or Drop FREB XML file here</div>
         <select id="timeZoneSelector" title="Switch Time Zone">
             <option value="server">Server Time</option>
             <option value="local">Local Time</option>
@@ -460,6 +472,36 @@
             }
         }
 
+        function enterUrl() {
+            const url = prompt("Enter the URL of the FREB XML file:");
+            if (url) {
+                fetch(url)
+                    .then(response => {
+                        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                        return response.text();
+                    })
+                    .then(xmlText => renderFrebXml(url, xmlText))
+                    .catch(err => {
+                        const container = document.getElementById('viewer-content');
+                        container.innerHTML = `<div class="card" style="color: red">Error fetching URL: ${err.message}</div>`;
+                    });
+            }
+        }
+
+        function selectFile() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.xml';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = ev => renderFrebXml(file.name, ev.target.result);
+                    reader.readAsText(file);
+                }
+            };
+            input.click();
+        }
         async function renderFrebXml(title, xmlText) {
             window.document.title = `FREB Viewer - ${title}`;
             const container = document.getElementById('viewer-content');
@@ -478,6 +520,7 @@
                         <h2 onclick="toggleSummary()">
                             <span class="toggle-btn" id="summary-toggle-btn">-</span>
                             Request Summary
+                            <span class="summary-title">${title}</span>
                         </h2>
                         <div class="summary-grid" id="summary-grid-content">
                             ${renderSummaryItem('URL', failedReq.getAttribute('url'))}
@@ -746,25 +789,11 @@
 
         // Drag and Drop Logic
         const dropZone = document.getElementById('drop-zone');
-        ['dragenter', 'dragover', 'dragleave', 'drop', 'click'].forEach(name => {
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(name => {
             dropZone.addEventListener(name, e => { e.preventDefault(); e.stopPropagation(); });
         });
         dropZone.addEventListener('dragover', () => dropZone.classList.add('dragover'));
         dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-        dropZone.addEventListener('click', () => {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.xml';
-            input.onchange = e => {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = ev => renderFrebXml(file.name, ev.target.result);
-                    reader.readAsText(file);
-                }
-            };
-            input.click();
-        });        
         dropZone.addEventListener('drop', e => {
             dropZone.classList.remove('dragover');
             const file = e.dataTransfer.files[0];
