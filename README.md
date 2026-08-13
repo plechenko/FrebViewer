@@ -15,6 +15,10 @@ FREB Viewer is a Microsoft IIS Failed Request Tracing (FREB) file viewer for mod
 - A modern web browser.
 - IIS FREB XML files for analysis.
 
+### Usage
+
+Open [FrebViewer.html](FrebViewer.html) in your browser and select or drop a FREB XML file for analysis.
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
