@@ -323,7 +323,6 @@
         .filter-container {
             position: relative;
             display: inline-block;
-            margin-top: -5px;
         }
 
         .filter-content {
@@ -535,9 +534,9 @@
                     <div class="card trace-card">
                         <h2 style="display: flex; justify-content: space-between; align-items: center;">
                             Event Trace
-                            <span style="display: flex; gap: 8px;">
+                            <span style="display: flex; gap: 2px;">
+                                <button class="small-btn" onclick="toggleFilters(event)">Filters</button>
                                 <div class="filter-container">
-                                    <button class="small-btn" onclick="toggleFilters(event)">Filters</button>
                                     <div id="filterPopup" class="filter-content">
                                         <div class="filter-group">
                                             <div class="filter-group-title">Search</div>
