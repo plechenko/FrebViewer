@@ -436,7 +436,7 @@
 
 <body>
     <div id="toolbar">
-        <strong>FrebLens Viewer</strong>
+        <strong>FREB Viewer</strong>
         <div id="drop-zone"><a onclick="enterUrl()">Enter URL</a> or <a onclick="selectFile()">Click to select</a> or Drop FREB XML file here</div>
         <select id="timeZoneSelector" title="Switch Time Zone">
             <option value="server">Server Time</option>
@@ -447,9 +447,9 @@
             <option value="dark" title="Dark Theme">🌙</option>
             <option value="system" title="System Theme">🌓</option>
         </select>
+        <a href="https://github.com/plechenko/FrebViewer" title="https://github.com/plechenko/FrebViewer" target="_blank"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAACXBIWXMAAAsTAAALEwEAmpwYAAACi0lEQVR4nJ3VW+jPdxgH8J/TBUrKIUuR5hAp1MytWhqFGRcUyoUxkbJw40ZIahe0DCkzN1tNMYdCUg4pqW2kjBxbxnJaI+fDSw/Pd338+/3+B0996/uc3s/z+byfz+dTq7Ug6IAxmIkl+cX/p+FrKb854CH4AXc0lvBtw+C2AHfFFrzAf9iOqQGSvq75Pw0/4kHGbkKXlsD74w+8xHr0bEVDvbAhc35Hv0aBPXApu57U6iWn4HPcx1X0bursiBN4hE+wAndxAOMzpjsG4mN0S9tEHMK9JH80HuPYewOAeUnajNT/wgVcL8isR3DIZVzB+cydlfa5FXhn3MLRouBTrEEnLEoyl2bybCxL2/xc/eZYRZF/HDcDO5QpWfGzdLbP7fnpvX1sRrAHN9Au9XGJOTmUHbnct3uGOemc3YYCX2XO9ILTaHJ7KGexuwg+gjOtBQ+JznER+wrbrzHytex+Y+EIgrfV2ij4OYoU+kbcjp9nWFc4YiJ2fECBnThX6GtjWGrJ9v+AOddt2qKQPKS7Cn0r/q5G6mThWJiEja1sLUkeuJA5he3U29HPeX+Fj+KywtAkLLj5ohq9BsAx0tPxb95hnYpr5zlWhTI8qy9LguVxr+RWTAcmFMBf5jVyO2Oi276FP7BeY1hlOJxdRFIlsapf8Fvq3xYA36VtfxymWEnh65GrP1gudVhOU8zu6bzfzzYpNqqI75v2+XW2bFdiveu+cC7OpAp4Z95Dy+N5rLP/0cTqJuDfZ+7iRqStU1+u1Il9WRVAH+zN2LWNhqJKXJC3acifycHDOnGxbfG0rkz+nuDrZsGL5EE5OTEJIdfqxPxT8LM7HqJWgTcBiRfsG4yo4xsZjwoGNAfyBrrYVblVzaxPAAAAAElFTkSuQmCC" width="24px" height="24px"></a>
     </div>
     <div id="viewer-content"></div>
-
     <script>
         const NS = {
             ev: "http://schemas.microsoft.com/win/2004/08/events/event",
