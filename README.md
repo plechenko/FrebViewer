@@ -25,7 +25,7 @@ Open [FrebViewer.html](https://plechenko.github.io/FrebViewer/FrebViewer.html) i
 
 Want to try on some real life examples? You can grab a bunch of sample FREB files from the [samples/](https://github.com/plechenko/FrebViewer/tree/main/samples/) directory.
 
-FREB Viewer supports drag-and-drop of FREB files from your file system, as well as selecting files via the file selection dialog or entering a URL. While entering a URL you can provide partial url name like: `samples/fr000001.xml`.
+FREB Viewer supports drag-and-drop of FREB files from your file system, as well as selecting files via the file selection dialog or entering a URL. While entering a URL you can provide partial url name like: `samples/fr000001.xml`. You can also specify the url via query string parameter like `?url=samples/fr000001.xml` to open the viewer directly with a specific FREB file.
 
 ## Contributing
 
